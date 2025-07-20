@@ -1,86 +1,71 @@
 import { useLoaderData } from "@remix-run/react";
 import { json } from "@remix-run/cloudflare";
 import type { LoaderFunctionArgs, MetaFunction } from "@remix-run/cloudflare";
-import { client } from "~/lib/graphql/client.server";
-import { graphql } from "~/graphql";
-import type { BlogIndexQuery, BlogIndexQueryVariables } from "~/graphql/graphql";
 import Paginator from "~/components/organisms/Paginator";
 import { PostList } from "~/components/organisms/blog";
-
-const blogIndexQuery = graphql(`
-  query BlogIndex ($before: String, $after: String, $first: Int, $last: Int, $filter: PostFilter) {
-    site(slug: "lynlab.co.kr") {
-      namespace(slug: "blog") {
-        posts(before: $before, after: $after, first: $first, last: $last, filter: $filter) {
-          edges {
-            cursor
-            node {
-              slug
-              title
-              description
-              thumbnailUrl
-              thumbnailBlurhash
-              createdAt
-              tags { slug name }
-            }
-          }
-          pageInfo {
-            hasPreviousPage hasNextPage startCursor endCursor
-          }
-        }
-      }
-    }
-  }
-`);
 
 export const meta: MetaFunction = () => ([
   { title: "블로그 | LYnLab" },
 ]);
 
-export const loader = async ({ request }: LoaderFunctionArgs) => {
-  const variables: BlogIndexQueryVariables = {};
-
-  // Filters
+export const loader = async ({ context, request }: LoaderFunctionArgs) => {
+  const strapiUrl = context.env.STRAPI_API_URL;
   const urlParams = new URL(request.url).searchParams;
-  if (urlParams.has("tag")) {
-    variables.filter = { tags: [urlParams.get("tag")!] };
+  const tagSlug = urlParams.get("tag");
+
+  // 기본 populate 설정
+  let apiUrl = `${strapiUrl}/api/posts?populate[author][populate]=avatar&populate=thumbnail&populate=tags`;
+
+  // 태그 필터가 있으면 API URL에 필터를 추가합니다.
+  if (tagSlug) {
+    apiUrl += `&filters[tags][slug][$eq]=${tagSlug}`;
   }
 
-  // Pagination
-  const pageSize = 12;
-  if (urlParams.has("before")) {
-    variables.before = urlParams.get("before")!;
-    variables.last = pageSize;
-  } else if (urlParams.has("after")) {
-    variables.after = urlParams.get("after")!;
-    variables.first = pageSize;
-  } else {
-    variables.last = pageSize;
-  }
-
-  const { data, error } = await client.query<BlogIndexQuery>(blogIndexQuery, variables).toPromise();
-  if (error || !data?.site?.namespace?.posts) {
+  const response = await fetch(apiUrl);
+  if (!response.ok) {
     throw json(null, { status: 500 });
   }
 
-  const postPage = data.site.namespace.posts;
-  const loaderData: { postPage: typeof postPage, filter?: { tags: { slug: string, name: string }[] } } = { postPage };
-  if (urlParams.has("tag") && postPage.edges.length > 0) {
-    const filteredTag = postPage.edges[0].node!.tags.filter((tag) => tag.slug === urlParams.get("tag"));
-    loaderData.filter = { tags: filteredTag };
+  const { data, meta } = await response.json();
+
+  const posts = data.map((post: any) => ({
+    ...post.attributes,
+    id: post.id,
+    thumbnailUrl: post.attributes.thumbnail?.data?.attributes?.url
+      ? `${strapiUrl}${post.attributes.thumbnail.data.attributes.url}`
+      : null,
+    author: post.attributes.author?.data?.attributes,
+    tags: post.attributes.tags?.data.map((tag: any) => tag.attributes),
+  }));
+
+  // 페이지네이션 정보 (현재는 Strapi의 기본값을 사용)
+  const pageInfo = {
+    hasPreviousPage: false,
+    hasNextPage: false,
+    startCursor: null,
+    endCursor: null,
+  };
+
+  // 필터링된 태그 정보를 전달하기 위한 로직 (UI 표시에 사용)
+  let filter = undefined;
+  if (tagSlug && posts.length > 0) {
+    const allTags = posts.flatMap(p => p.tags);
+    const filteredTag = allTags.find(t => t.slug === tagSlug);
+    if (filteredTag) {
+      filter = { tags: [filteredTag] };
+    }
   }
-  return json(loaderData);
+
+  return json({ posts, pageInfo, filter });
 };
 
 export default function index() {
-  const { postPage, filter } = useLoaderData<typeof loader>();
+  const { posts, pageInfo, filter } = useLoaderData<typeof loader>();
 
-  const { edges, pageInfo } = postPage;
-  const posts = edges.map((edge) => edge.node!).sort((a, b) => (Date.parse(b.createdAt) - Date.parse(a.createdAt)));
   return (
     <>
       <PostList posts={posts} filter={filter} />
-      <Paginator pageInfo={pageInfo} reversed={true} />
+      {/* <Paginator pageInfo={pageInfo} reversed={true} /> */}
     </>
   );
 }

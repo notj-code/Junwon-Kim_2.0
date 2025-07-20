@@ -4,6 +4,7 @@ export interface Env {
   SITE_CONFIGS: KVNamespace;
 
   SITE_HOST: string;
+  STRAPI_API_URL: string;
   SESSION_SECRET: string;
   GITHUB_CLIENT_ID: string;
   GITHUB_CLIENT_SECRET: string;

@@ -8,6 +8,9 @@ export type PostListItemProps = {
   description: string | null;
   thumbnailUrl: string | null;
   thumbnailBlurhash: string | null;
+  author?: {
+    name: string;
+  };
   tags?: {
     slug: string;
     name: string;
@@ -18,7 +21,7 @@ export type PostListItemProps = {
 };
 
 export default function PostListItem(
-  { title, description, thumbnailUrl, thumbnailBlurhash, tags, onPostClick, onTagClick }: PostListItemProps,
+  { title, description, thumbnailUrl, thumbnailBlurhash, author, tags, onPostClick, onTagClick }: PostListItemProps,
 ) {
   return (
     <div className="rounded-xl bg-white shadow-xl shadow-neutral-200">
@@ -35,12 +38,16 @@ export default function PostListItem(
         </div>
       </div>
 
+      <div className="p-4 pt-0 text-sm text-neutral-500">
+        {author && <p className="font-semibold">{author.name}</p>}
+      </div>
+
       {tags && (
         <div className="p-4 flex flex-wrap text-sm text-neutral-500 z-10">
           {tags.map((tag) => (
             <div
               key={`tag-${tag.slug}`}
-              className="mt-1 mr-1 py-1 px-2 w-content border rounded-lg hover:bg-neutral-200 transition cursor-pointer"
+              className="mt-1 mr-1 py-1 px-2 w-content border rounded-lg hover:bg-neutral-20-200 transition cursor-pointer"
               onClick={() => { onTagClick && onTagClick(tag.slug); }}
             >
               #{tag.name}

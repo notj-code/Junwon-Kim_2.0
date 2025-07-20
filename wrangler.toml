@@ -1,4 +1,4 @@
-name = "lynlab-co-kr"
+name = "junwon-kim"
 pages_build_output_dir = "./build/client"
 
 # https://developers.cloudflare.com/workers/platform/compatibility-dates
@@ -6,14 +6,15 @@ compatibility_date = "2024-02-11"
 
 [[kv_namespaces]]
   binding = "__KV_SESSIONS"
-  id = "5a841e28615d4e978c6e8380cabb5aa7"
+  id = "cf0dcbf67d3c4585af3fd3a3143f5d22"
 
 [[kv_namespaces]]
   binding = "SITE_CONFIGS"
-  id = "1d296decaab544b99cb71b3d7cf904c4"
+  id = "03db12cb6962432fabfe4a54b579856b"
 
 [vars]
-SITE_HOST = "https://lynlab.co.kr"
+SITE_HOST = "https://junwon-kim.pages.dev"
+STRAPI_API_URL = "http://localhost:1337" # Default value, will be overridden by .dev.vars in local dev
 # Secrets (see .dev.vars)
 #   - SESSION_SECRET
 #   - GITHUB_CLIENT_ID

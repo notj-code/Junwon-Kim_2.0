@@ -11,6 +11,9 @@ type PostListProps = {
     description: string | null;
     thumbnailUrl: string | null;
     thumbnailBlurhash: string | null;
+    author: {
+      name: string;
+    };
     tags: {
       slug: string;
       name: string;
@@ -62,6 +65,7 @@ export default function PostList({ posts, filter }: PostListProps) {
             description={post.description}
             thumbnailUrl={post.thumbnailUrl}
             thumbnailBlurhash={post.thumbnailBlurhash}
+            author={post.author}
             tags={post.tags}
             onPostClick={() => { navigate(`/blog/${post.slug}`); }}
             onTagClick={(slug) => { setSearchParams({ tag: slug }); }}

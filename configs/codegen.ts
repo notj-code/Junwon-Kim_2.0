@@ -1,7 +1,7 @@
 import { CodegenConfig } from "@graphql-codegen/cli";
 
 const config: CodegenConfig = {
-  schema: "https://cms.lynlab.co.kr/graphql",
+  schema: "http://localhost:1337/graphql",
   documents: ["app/**/*.{ts,tsx}"],
   config: {
     scalars: {

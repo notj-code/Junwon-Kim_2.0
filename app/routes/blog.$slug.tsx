@@ -1,53 +1,48 @@
 import { useLoaderData, useRouteError } from "@remix-run/react";
 import type { ErrorBoundaryComponent } from "@remix-run/react/dist/routeModules";
 import { json, type LoaderFunction, type MetaFunction } from "@remix-run/cloudflare";
-import { client } from "~/lib/graphql/client.server";
-import { graphql } from "~/graphql";
-import type { PostViewQuery } from "~/graphql/graphql";
 import Container from "~/components/atoms/Container";
 import { Divider } from "~/components/atoms/Divider";
 import type { TableOfContents } from "~/components/organisms/blog";
 import { ActivityButtons, PostComment, PostContent, PostIntro, PostTableOfContents, RelatedPosts } from "~/components/organisms/blog";
 import Error from "~/components/templates/error/Error";
 import { useState } from "react";
+import { MarkdownBlob } from "~/components/molecules/blobviews";
 
 const errorInternal = "internal_error";
 const errorPostNotFound = "post_not_found";
 
-const query = graphql(`
-  query PostView($slug: String!) {
-    post(site: "lynlab.co.kr", namespace: "blog", slug: $slug) {
-      title slug description thumbnailUrl createdAt
-      blobs {
-        uuid type
-        ... on MarkdownBlob { text }
-        ... on ImageBlob { url previewUrl caption }
-      }
-      tags {
-        slug name
-        posts(first: 4, sort: CREATED_DESC) {
-          nodes {
-            title slug description thumbnailUrl createdAt
-          }
-        }
-      }
-    }
-  }
-`);
-
 type LoaderData = {
-  post: Exclude<PostViewQuery["post"], null>;
+  post: any; // 타입을 간단하게 any로 설정합니다.
 };
 
-export const loader: LoaderFunction = async ({ params }) => {
+export const loader: LoaderFunction = async ({ context, params }) => {
   const slug = params.slug!;
-  const { data, error } = await client.query(query, { slug }).toPromise();
-  if (error) {
+  const strapiUrl = context.env.STRAPI_API_URL;
+
+  // slug를 기준으로 Strapi API에서 게시물을 필터링하고 author, avatar, tags 정보를 함께 가져옵니다.
+  const response = await fetch(`${strapiUrl}/api/posts?filters[slug][$eq]=${slug}&populate[author][populate]=avatar&populate=thumbnail&populate=tags`);
+
+  if (!response.ok) {
     throw json({ error: errorInternal }, { status: 500 });
-  } else if (!data?.post) {
+  }
+
+  const { data } = await response.json();
+
+  if (!data || data.length === 0) {
     throw json({ error: errorPostNotFound }, { status: 404 });
   }
-  return json<LoaderData>({ post: data.post! });
+
+  const post = {
+    ...data[0].attributes,
+    id: data[0].id,
+    thumbnailUrl: data[0].attributes.thumbnail?.data?.attributes?.url
+      ? `${strapiUrl}${data[0].attributes.thumbnail.data.attributes.url}`
+      : null,
+    author: data[0].attributes.author?.data?.attributes,
+  };
+
+  return json<LoaderData>({ post, strapiUrl });
 };
 
 export const meta: MetaFunction<typeof loader> = ({ data }) => {
@@ -89,26 +84,12 @@ export const ErrorBoundary: ErrorBoundaryComponent = () => {
   return <Error message={errorMessage} />;
 };
 
-const uniquePostFilter = (post: { slug: string }, index: number, array: { slug: string }[]): boolean => {
-  return array.findIndex((p) => p.slug === post.slug) === index;
-};
-
 export default function BlogPost() {
-  const { post } = useLoaderData<LoaderData>();
-
+  const { post, strapiUrl } = useLoaderData<LoaderData>();
   const [toc, setToc] = useState<TableOfContents>([]);
 
-  const relatedPosts = post.tags.flatMap((tag) => tag.posts.nodes)
-    .filter((relatedPost) => post.slug !== relatedPost.slug)
-    .filter(uniquePostFilter)
-    .sort((a, b) => Date.parse(b.createdAt) - Date.parse(a.createdAt))
-    .map((post) => ({
-      title: post.title,
-      slug: post.slug,
-      description: post.description || null,
-      thumbnailUrl: post.thumbnailUrl || null,
-    }))
-    .slice(0, 3);
+  // `tags`와 `relatedPosts`는 아직 구현되지 않았으므로 비워둡니다.
+  const relatedPosts: any[] = [];
 
   return (
     <>
@@ -124,11 +105,19 @@ export default function BlogPost() {
             <PostIntro
               title={post.title}
               description={post.description || null}
-              thumbnailUrl={post.thumbnailUrl || null}
+              thumbnailUrl={post.thumbnailUrl}
               createdAt={post.createdAt}
-              tags={post.tags}
+              author={post.author}
+              tags={[]} // tags를 빈 배열로 전달
+              strapiUrl={strapiUrl}
             />
-            <PostContent blobs={post.blobs} onTocReady={setToc} />
+            {/* 
+              PostContent 대신 MarkdownBlob을 직접 사용하여 
+              Strapi의 content 필드를 렌더링합니다.
+            */}
+            <div className="prose prose-lg mt-8">
+              <MarkdownBlob text={post.content} />
+            </div>
           </div>
         </div>
 
