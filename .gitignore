@@ -1,0 +1,16 @@
+node_modules
+
+/.cache
+/build
+/dist
+/public/build
+/.mf
+.env
+.dev.vars
+.wrangler
+
+/.idea
+/.code
+
+/app/styles/app.css
+yarn-error.log

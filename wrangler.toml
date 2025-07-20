@@ -1,0 +1,23 @@
+name = "lynlab-co-kr"
+pages_build_output_dir = "./build/client"
+
+# https://developers.cloudflare.com/workers/platform/compatibility-dates
+compatibility_date = "2024-02-11"
+
+[[kv_namespaces]]
+  binding = "__KV_SESSIONS"
+  id = "5a841e28615d4e978c6e8380cabb5aa7"
+
+[[kv_namespaces]]
+  binding = "SITE_CONFIGS"
+  id = "1d296decaab544b99cb71b3d7cf904c4"
+
+[vars]
+SITE_HOST = "https://lynlab.co.kr"
+# Secrets (see .dev.vars)
+#   - SESSION_SECRET
+#   - GITHUB_CLIENT_ID
+#   - GITHUB_CLIENT_SECRET
+
+[placement]
+  mode = "smart"
