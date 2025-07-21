@@ -40,6 +40,7 @@ export const loader: LoaderFunction = async ({ context, params }) => {
       ? `${strapiUrl}${data[0].attributes.thumbnail.data.attributes.url}`
       : null,
     author: data[0].attributes.author?.data?.attributes,
+    tags: data[0].attributes.tags?.data.map((tag: any) => tag.attributes),
   };
 
   return json<LoaderData>({ post, strapiUrl });
@@ -108,7 +109,7 @@ export default function BlogPost() {
               thumbnailUrl={post.thumbnailUrl}
               createdAt={post.createdAt}
               author={post.author}
-              tags={[]} // tags를 빈 배열로 전달
+              tags={post.tags} // tags를 전달
               strapiUrl={strapiUrl}
             />
             {/* 
